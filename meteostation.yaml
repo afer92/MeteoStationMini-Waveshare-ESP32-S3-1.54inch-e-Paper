@@ -86,6 +86,7 @@ switch:
     id: prevent_deep_sleep
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
+    # restore_mode: RESTORE_DEFAULT_ON
 
 script:
   - id: aller_dormir
@@ -143,7 +144,7 @@ font:
   # Valeurs intérieures (20.8°C  48%)
   - file: "gfonts://Roboto@500"
     id: font_indoor
-    size: 18
+    size: 22
     glyphs: "0123456789.-°C% "
 
   # Grande icône météo centrale
@@ -277,14 +278,15 @@ display:
       it.line(6, 134, 194, 134);
 
       // 3. ZONE INFÉRIEURE : ICÔNE MAISON + THERMOMÈTRE TEMP + GOUTTE HUMIDITÉ
-      it.printf(4, 152, id(font_small_icons), "\U000F02DC");
+      it.printf(2, 152, id(font_small_icons), "\U000F02DC");
 
       if (id(indoor_temp).has_state()) {
-        it.printf(36, 152, id(font_small_icons), "\U000F050F");
-        it.printf(58, 155, id(font_indoor), "%.1f°C", id(indoor_temp).state);
+        it.printf(30, 152, id(font_small_icons), "\U000F050F");
+        it.printf(52, 153, id(font_indoor), "%.1f°", id(indoor_temp).state);
       }
 
       if (id(indoor_hum).has_state()) {
-        it.printf(136, 152, id(font_small_icons), "\U000F058C");
-        it.printf(196, 155, id(font_indoor), TextAlign::TOP_RIGHT, "%.0f%%", id(indoor_hum).state);
+        it.printf(126, 152, id(font_small_icons), "\U000F058C");
+        it.printf(198, 153, id(font_indoor), TextAlign::TOP_RIGHT, "%.0f%%", id(indoor_hum).state);
       }
+
