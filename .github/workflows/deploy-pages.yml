@@ -29,10 +29,11 @@ jobs:
             printf 'wifi_ssid: "TestSSID"\nwifi_password: "TestPassword"\n' > secrets.yaml
           fi
 
-      - name: Download Material Design Icons font
+      - name: Install Material Design Icons font
         run: |
           mkdir -p fonts
-          curl -L -o fonts/materialdesignicons-webfont.ttf https://githubusercontent.com
+          npm install @mdi/font --no-save
+          cp node_modules/@mdi/font/fonts/materialdesignicons-webfont.ttf fonts/materialdesignicons-webfont.ttf
 
       - name: Set up Python
         uses: actions/setup-python@v5
