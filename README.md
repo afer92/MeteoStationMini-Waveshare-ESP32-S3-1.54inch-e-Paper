@@ -1,5 +1,7 @@
 # 🌦️ Station Météo e-Paper (ESPHome & Home Assistant) / e-Paper Weather Station
 
+![Aperçu de la Station Météo e-Paper / e-Paper Weather Station Preview](docs/screen.jpg)
+
 [🇫🇷 Français](#-français) | [🇬🇧 English](#-english)
 
 ---
