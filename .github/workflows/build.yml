@@ -2,10 +2,6 @@ name: Build ESPHome Firmware
 
 on:
   push:
-    branches: [ main, master ]name: Build ESPHome Firmware
-
-on:
-  push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
@@ -26,40 +22,11 @@ jobs:
             printf 'wifi_ssid: "TestSSID"\nwifi_password: "TestPassword"\n' > secrets.yaml
           fi
 
-      - name: Download Material Design Icons font
+      - name: Install Material Design Icons font
         run: |
           mkdir -p fonts
-          curl -L -o fonts/materialdesignicons-webfont.ttf https://githubusercontent.com
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install ESPHome
-        run: pip install esphome
-
-      - name: Compile ESPHome configuration
-        run: esphome compile meteostation.yaml
-
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    name: Validate & Compile ESPHome
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Prepare secrets.yaml
-        run: |
-          if [ ! -f secrets.yaml ]; then
-            printf 'wifi_ssid: "TestSSID"\nwifi_password: "TestPassword"\n' > secrets.yaml
-          fi
+          npm install @mdi/font --no-save
+          cp node_modules/@mdi/font/fonts/materialdesignicons-webfont.ttf fonts/materialdesignicons-webfont.ttf
 
       - name: Set up Python
         uses: actions/setup-python@v5
