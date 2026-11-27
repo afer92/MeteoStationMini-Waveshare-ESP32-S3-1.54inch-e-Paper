@@ -16,15 +16,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup secrets from example
+      - name: Prepare secrets.yaml
         run: |
-          if [ -f secrets.yaml.example ]; then
-            cp secrets.yaml.example secrets.yaml
-          else
+          if [ ! -f secrets.yaml ]; then
             printf 'wifi_ssid: "TestSSID"\nwifi_password: "TestPassword"\n' > secrets.yaml
           fi
 
-      - name: Compile ESPHome configuration
-        uses: esphome/build-action@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          yaml_file: station-meteo-epaper.yaml
+          python-version: '3.12'
+
+      - name: Install ESPHome
+        run: pip install esphome
+
+      - name: Compile ESPHome configuration
+        run: esphome compile meteostation.yaml
