@@ -88,6 +88,46 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     # restore_mode: RESTORE_DEFAULT_ON
 
+number:
+  - platform: template
+    name: "Durée Deep Sleep"
+    id: sleep_duration_min
+    unit_of_measurement: "min"
+    icon: "mdi:sleep"
+    min_value: 1
+    max_value: 1440
+    step: 5
+    initial_value: 60
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  - platform: template
+    name: "Offset Température Intérieure"
+    id: indoor_temp_offset
+    unit_of_measurement: "°C"
+    icon: "mdi:thermometer-plus"
+    min_value: -10.0
+    max_value: 10.0
+    step: 0.1
+    initial_value: 0.0
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  - platform: template
+    name: "Offset Humidité Intérieure"
+    id: indoor_hum_offset
+    unit_of_measurement: "%"
+    icon: "mdi:water-percent"
+    min_value: -20.0
+    max_value: 20.0
+    step: 1.0
+    initial_value: 0.0
+    optimistic: true
+    restore_value: true
+    mode: box
+    
 script:
   - id: aller_dormir
     then:
@@ -103,6 +143,9 @@ script:
                 gpio_hold_en(GPIO_NUM_17);
                 gpio_hold_en(GPIO_NUM_6);
                 gpio_deep_sleep_hold_en();
+                id(deep_sleep_control).set_sleep_duration(
+                  (uint64_t)(id(sleep_duration_min).state * 60000ULL)
+                );
             - deep_sleep.enter: deep_sleep_control
 
 # --- HEURE VIA HOME ASSISTANT ---
@@ -197,9 +240,13 @@ sensor:
     temperature:
       name: "Température Intérieure"
       id: indoor_temp
+      filters:
+        - lambda: return x + id(indoor_temp_offset).state;
     humidity:
       name: "Humidité Intérieure"
       id: indoor_hum
+      filters:
+        - lambda: return x + id(indoor_hum_offset).state;
     update_interval: 5s
 
   - platform: adc
