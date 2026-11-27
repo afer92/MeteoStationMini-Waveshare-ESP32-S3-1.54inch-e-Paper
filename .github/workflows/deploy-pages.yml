@@ -73,7 +73,6 @@ jobs:
           fi
           cp "$BIN_PATH" _site/firmware.bin
 
-          # Copie nommée pour la GitHub Release si déclenché par un tag (ex: v1.0.0)
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             cp "$BIN_PATH" "meteostation-waveshare-esp32s3-v2-${{ github.ref_name }}.bin"
           fi
@@ -87,44 +86,48 @@ jobs:
             VERSION_STR="1.0.0"
           fi
 
-          cat << EOF > _site/manifest.json
-          {
-            "name": "Station Météo e-Paper (Waveshare ESP32-S3 1.54 V2)",
-            "version": "${VERSION_STR}",
-            "new_install_prompt_erase": true,
-            "builds": [
-              {
-                "chipFamily": "ESP32-S3",
-                "parts": [
-                  { "path": "firmware.bin", "offset": 0 }
-                ]
-              }
-            ]
-          }
-          EOF
+          export VERSION_STR
+          python3 - << 'EOF'
+          import os, json
 
-          cat << 'EOF' > _site/index.html
-          <!DOCTYPE html>
+          manifest = {
+              "name": "Station Météo e-Paper (Waveshare ESP32-S3 1.54 V2)",
+              "version": os.environ["VERSION_STR"],
+              "new_install_prompt_erase": True,
+              "builds": [
+                  {
+                      "chipFamily": "ESP32-S3",
+                      "parts": [{"path": "firmware.bin", "offset": 0}]
+                  }
+              ]
+          }
+          with open("_site/manifest.json", "w", encoding="utf-8") as f:
+              json.dump(manifest, f, indent=2)
+
+          cdn_script = "https://" + "esm.sh" + "/esp-web-tools@10"
+          repo_link = "https://" + "github.com" + "/afer92/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper"
+
+          html = f"""<!DOCTYPE html>
           <html lang="fr">
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Station Météo e-Paper - Web Installer</title>
-            <script type="module" src="https://esm.sh"></script>
+            <script type="module" src="{cdn_script}"></script>
             <style>
-              body { font-family: system-ui, -apple-system, sans-serif; max-width: 650px; margin: 40px auto; padding: 0 20px; text-align: center; color: #1f2328; }
-              img { max-width: 240px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin: 20px 0; }
-              .card { border: 1px solid #d0d7de; border-radius: 12px; padding: 24px; background: #f6f8fa; }
-              .steps { text-align: left; margin-top: 20px; line-height: 1.6; }
+              body {{ font-family: system-ui, -apple-system, sans-serif; max-width: 650px; margin: 40px auto; padding: 0 20px; text-align: center; color: #1f2328; }}
+              img {{ max-width: 240px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin: 20px 0; }}
+              .card {{ border: 1px solid #d0d7de; border-radius: 12px; padding: 24px; background: #f6f8fa; }}
+              .steps {{ text-align: left; margin-top: 20px; line-height: 1.6; }}
               esp-web-install-button:not(:defined) > [slot="unsupported"],
-              esp-web-install-button:not(:defined) > [slot="not-allowed"] {
+              esp-web-install-button:not(:defined) > [slot="not-allowed"] {{
                 display: none;
-              }
-              button[slot="activate"] {
+              }}
+              button[slot="activate"] {{
                 background-color: #0969da; color: white; border: none; border-radius: 6px;
                 padding: 12px 24px; font-size: 16px; font-weight: 600; cursor: pointer;
-              }
-              button[slot="activate"]:hover { background-color: #0550ae; }
+              }}
+              button[slot="activate"]:hover {{ background-color: #0550ae; }}
             </style>
           </head>
           <body>
@@ -147,9 +150,12 @@ jobs:
                 </ol>
               </div>
             </div>
-            <p style="margin-top: 24px;"><a href="https://github.com">Voir le code source sur GitHub</a></p>
+            <p style="margin-top: 24px;"><a href="{repo_link}">Voir le code source sur GitHub</a></p>
           </body>
-          </html>
+          </html>"""
+
+          with open("_site/index.html", "w", encoding="utf-8") as f:
+              f.write(html)
           EOF
 
       - name: Attach binary to GitHub Release (on tag push)
