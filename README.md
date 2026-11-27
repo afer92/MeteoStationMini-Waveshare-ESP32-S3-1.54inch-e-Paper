@@ -75,7 +75,7 @@ template:
 ### 🚀 Installation
 #### Option 1 : Installation directe via navigateur (Recommandée)
 1. Branchez la carte en USB-C à votre ordinateur et passez-la en mode Bootloader (maintenir **BOOT** `GPIO0`, appuyer sur **RESET**, relâcher **BOOT**).
-2. Ouvrez la page **[ESP Web Tools](https://github.io)** dans Google Chrome ou Microsoft Edge.
+2. Ouvrez la page **[ESP Web Tools](https://afer92.github.io/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper/)** dans Google Chrome ou Microsoft Edge.
 3. Cliquez sur **Connecter et Installer**, puis configurez votre réseau Wi-Fi directement dans la fenêtre après le flashage.
 4. Débranchez le câble USB-C et effectuez un **appui long (~1,5 s) sur le bouton Power** pour enclencher le verrouillage batterie.
 
@@ -153,7 +153,7 @@ template:
 ### 🚀 Installation
 #### Option 1: One-Click Browser Installation (Recommended)
 1. Connect the board via USB-C to your computer and enter Bootloader mode (hold **BOOT** `GPIO0`, press **RESET**, release **BOOT**).
-2. Open **[ESP Web Tools](https://github.io)** in Google Chrome or Microsoft Edge.
+2. Open **[ESP Web Tools](https://afer92.github.io/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper/)** in Google Chrome or Microsoft Edge.
 3. Click **Connecter et Installer**, then configure your Wi-Fi credentials directly in the browser dialog after flashing.
 4. Unplug the USB-C cable and **long-press (~1.5 s) the side Power button** to engage the battery power latch.
 
