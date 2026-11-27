@@ -75,6 +75,17 @@ template:
         device_class: temperature
         state: "{{ daily_forecast['weather.forecast_maison'].forecast[0].templow }}"
 ```
+### 🎛️ Réglages et entités dans Home Assistant
+Une fois l'appareil ajouté dans **Home Assistant > Paramètres > Appareils et services > ESPHome**, les entités suivantes permettent de piloter et d'étalonner la station sans recompiler le firmware :
+
+| Entité | Type | Rôle et plage de réglage |
+| :--- | :--- | :--- |
+| **Durée Deep Sleep** | `number` | Définit l'intervalle de veille entre deux rafraîchissements (`1` à `1440 min`, défaut : `60 min`). Sauvegardé en mémoire flash. |
+| **Offset Température Intérieure** | `number` | Corrige la température mesurée par le capteur SHTC3 (`-10.0 °C` à `+10.0 °C`, pas de `0.1 °C`). |
+| **Offset Humidité Intérieure** | `number` | Corrige l'humidité mesurée par le capteur SHTC3 (`-20 %` à `+20 %`, pas de `1 %`). |
+| **Bloquer Deep Sleep (Mode OTA)** | `switch` | Maintient la carte éveillée au prochain réveil pour permettre une mise à jour sans fil (OTA). |
+| **Température / Humidité Intérieure** | `sensor` | Mesures locales corrigées remontées à chaque réveil. |
+| **Batterie** | `sensor` | Niveau de batterie estimé en pourcentage (`0 %` à `100 %`). |
 
 ### 🚀 Installation
 #### Option 1 : Installation directe via navigateur (Recommandée)
@@ -157,6 +168,18 @@ template:
         device_class: temperature
         state: "{{ daily_forecast['weather.forecast_maison'].forecast[0].templow }}"
 ```
+
+### 🎛️ Home Assistant Controls & Entities
+Once added under **Home Assistant > Settings > Devices & Services > ESPHome**, the following entities allow you to configure and calibrate the station without recompiling the firmware:
+
+| Entity | Type | Description & Range |
+| :--- | :--- | :--- |
+| **Durée Deep Sleep** | `number` | Sets the sleep interval between display refreshes (`1` to `1440 min`, default: `60 min`). Persisted in flash memory. |
+| **Offset Température Intérieure** | `number` | Calibrates the SHTC3 indoor temperature reading (`-10.0 °C` to `+10.0 °C`, step `0.1 °C`). |
+| **Offset Humidité Intérieure** | `number` | Calibrates the SHTC3 indoor humidity reading (`-20 %` to `+20 %`, step `1 %`). |
+| **Bloquer Deep Sleep (Mode OTA)** | `switch` | Keeps the board awake on the next wake-up cycle to allow Over-The-Air (OTA) firmware updates. |
+| **Température / Humidité Intérieure** | `sensor` | Calibrated local indoor sensor readings reported on each wake-up. |
+| **Batterie** | `sensor` | Estimated battery level percentage (`0 %` to `100 %`). |
 
 ### 🚀 Installation
 #### Option 1: One-Click Browser Installation (Recommended)
