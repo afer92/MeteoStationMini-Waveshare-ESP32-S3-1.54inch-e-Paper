@@ -16,6 +16,10 @@
 
 Station météo autonome sur batterie basée sur la carte **Waveshare ESP32-S3-ePaper-1.54 (Révision V2)** et **ESPHome**, conçue pour afficher les données de **Home Assistant** et les mesures intérieures locales avec une consommation ultra-faible.
 
+### 📂 Fichiers du dépôt
+* **`meteostation.yaml`** : Configuration complète de production (interface graphique par pictogrammes, météo Home Assistant, *Deep Sleep* configurable, verrouillage batterie `GPIO17`/`GPIO6`).
+* **`minimal.yaml`** : Configuration minimale prête à l'emploi pour tester rapidement le matériel (écran, capteur SHTC3, batterie) sans *Deep Sleep* ni police externe.
+
 ### ✨ Fonctionnalités
 * **Affichage e-Paper 1.54" (200×200 px) universel par pictogrammes** :
   * Heure synchronisée via Home Assistant et indicateur graphique du niveau de batterie (`GPIO4`).
@@ -93,6 +97,10 @@ template:
 ## 🇬🇧 English
 
 Battery-powered standalone weather station built on the **Waveshare ESP32-S3-ePaper-1.54 (Revision V2)** board and **ESPHome**, designed to display **Home Assistant** weather data and local indoor sensor readings with ultra-low power consumption.
+
+### 📂 Repository Files
+* **`meteostation.yaml`**: Full production configuration (universal icon-based UI, Home Assistant weather forecast, configurable *Deep Sleep*, hardware battery latch `GPIO17`/`GPIO6`).
+* **`minimal.yaml`**: Ready-to-use minimal configuration to quickly test the hardware (display, SHTC3 sensor, battery) without *Deep Sleep* or external icon fonts.
 
 ### ✨ Features
 * **Universal Icon-Based 1.54" e-Paper UI (200×200 px)**:
