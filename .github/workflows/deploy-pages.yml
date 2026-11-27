@@ -89,10 +89,16 @@ jobs:
               raise FileNotFoundError("bootloader.bin introuvable dans .esphome/build")
           build_dir = os.path.dirname(boot_files[0])
 
-          # Repérer le binaire applicatif (firmware.bin ou station-meteo-epaper.bin)
-          app_bin = "firmware.bin"
-          if not os.path.exists(os.path.join(build_dir, app_bin)):
-              app_bin = "station-meteo-epaper.bin"
+          # Repérer automatiquement le binaire applicatif (> 200 Ko)
+          app_bin = None
+          for f in os.listdir(build_dir):
+              full_p = os.path.join(build_dir, f)
+              if f.endswith(".bin") and f not in ("bootloader.bin", "partitions.bin", "ota_data_initial.bin", "firmware.factory.bin"):
+                  if os.path.getsize(full_p) > 200000:
+                      app_bin = f
+                      break
+          if not app_bin:
+              raise FileNotFoundError(f"Binaire applicatif introuvable dans {build_dir}: {os.listdir(build_dir)}")
 
           parts = []
           # ESP32-S3 : bootloader à 0x0 (0), partitions à 0x8000 (32768), ota_data à 0xe000 (57344), app à 0x10000 (65536)
