@@ -66,76 +66,27 @@ jobs:
       - name: Prepare GitHub Pages site & Release binary
         run: |
           mkdir -p _site
-
-          if [ -f docs/screen.jpg ]; then
-            cp docs/screen.jpg _site/screen.jpg
-          fi
-
+          [ -f docs/screen.jpg ] && cp docs/screen.jpg _site/screen.jpg
           VERSION_STR="${{ github.ref_name }}"
-          if [[ "$VERSION_STR" != v* ]]; then
-            VERSION_STR="1.0.0"
-          fi
-
-          export VERSION_STR
-          export GITHUB_REF="${{ github.ref }}"
-          export GITHUB_REF_NAME="${{ github.ref_name }}"
+          [[ "$VERSION_STR" != v* ]] && VERSION_STR="1.0.0"
+          export VERSION_STR GITHUB_REF="${{ github.ref }}" GITHUB_REF_NAME="${{ github.ref_name }}"
 
           python3 - << 'EOF'
-          import os, json, glob, shutil, subprocess
+          import os, json, glob, shutil
 
-          # Trouver le dossier de build via bootloader.bin (toujours présent sur ESP32-S3)
-          boot_files = glob.glob(".esphome/build/**/bootloader.bin", recursive=True)
-          if not boot_files:
-              raise FileNotFoundError("bootloader.bin introuvable dans .esphome/build")
-          build_dir = os.path.dirname(boot_files[0])
+          factory_files = glob.glob(".esphome/build/**/firmware.factory.bin", recursive=True)
+          if not factory_files:
+              raise FileNotFoundError("firmware.factory.bin introuvable dans .esphome/build")
+          shutil.copy(factory_files[0], "_site/firmware.bin")
 
-          # Repérer automatiquement le binaire applicatif (> 200 Ko)
-          app_bin = None
-          for f in os.listdir(build_dir):
-              full_p = os.path.join(build_dir, f)
-              if f.endswith(".bin") and f not in ("bootloader.bin", "partitions.bin", "ota_data_initial.bin", "firmware.factory.bin"):
-                  if os.path.getsize(full_p) > 200000:
-                      app_bin = f
-                      break
-          if not app_bin:
-              raise FileNotFoundError(f"Binaire applicatif introuvable dans {build_dir}: {os.listdir(build_dir)}")
-
-          parts = []
-          # ESP32-S3 : bootloader à 0x0 (0), partitions à 0x8000 (32768), ota_data à 0xe000 (57344), app à 0x10000 (65536)
-          candidates = [
-              ("bootloader.bin", 0),
-              ("partitions.bin", 32768),
-              ("ota_data_initial.bin", 57344),
-              (app_bin, 65536),
-          ]
-
-          merge_args = []
-          for fname, offset in candidates:
-              src = os.path.join(build_dir, fname)
-              if os.path.exists(src):
-                  dest_name = "firmware.bin" if fname == app_bin else fname
-                  shutil.copy(src, f"_site/{dest_name}")
-                  parts.append({"path": dest_name, "offset": offset})
-                  merge_args.extend([hex(offset), src])
-
-          # Générer un fichier factory unique complet pour la GitHub Release
           if os.environ.get("GITHUB_REF", "").startswith("refs/tags/v"):
-              release_bin = f"meteostation-waveshare-esp32s3-v2-{os.environ['GITHUB_REF_NAME']}.bin"
-              subprocess.run(
-                  ["esptool.py", "--chip", "esp32s3", "merge_bin", "-o", release_bin] + merge_args,
-                  check=True
-              )
+              shutil.copy(factory_files[0], f"meteostation-waveshare-esp32s3-v2-{os.environ['GITHUB_REF_NAME']}.bin")
 
           manifest = {
               "name": "Station Météo e-Paper (Waveshare ESP32-S3 1.54 V2)",
               "version": os.environ["VERSION_STR"],
               "new_install_prompt_erase": True,
-              "builds": [
-                  {
-                      "chipFamily": "ESP32-S3",
-                      "parts": parts
-                  }
-              ]
+              "builds": [{"chipFamily": "ESP32-S3", "parts": [{"path": "firmware.bin", "offset": 0}]}]
           }
           with open("_site/manifest.json", "w", encoding="utf-8") as f:
               json.dump(manifest, f, indent=2)
@@ -156,9 +107,7 @@ jobs:
               .card {{ border: 1px solid #d0d7de; border-radius: 12px; padding: 24px; background: #f6f8fa; }}
               .steps {{ text-align: left; margin-top: 20px; line-height: 1.6; }}
               esp-web-install-button:not(:defined) > [slot="unsupported"],
-              esp-web-install-button:not(:defined) > [slot="not-allowed"] {{
-                display: none;
-              }}
+              esp-web-install-button:not(:defined) > [slot="not-allowed"] {{ display: none; }}
               button[slot="activate"] {{
                 background-color: #0969da; color: white; border: none; border-radius: 6px;
                 padding: 12px 24px; font-size: 16px; font-weight: 600; cursor: pointer;
