@@ -16,24 +16,42 @@ concurrency:
 
 jobs:
   build:
-    name: Compile ESPHome & Prepare Web Flasher
+    name: Compile Generic Web Firmware & Prepare Pages
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare secrets.yaml
-        run: |
-          if [ ! -f secrets.yaml ]; then
-            printf 'wifi_ssid: "TestSSID"\nwifi_password: "TestPassword"\n' > secrets.yaml
-          fi
-
       - name: Install Material Design Icons font
         run: |
           mkdir -p fonts
           npm install @mdi/font --no-save
           cp node_modules/@mdi/font/fonts/materialdesignicons-webfont.ttf fonts/materialdesignicons-webfont.ttf
+
+      - name: Generate generic YAML for Web Installer (DHCP + Improv Serial)
+        run: |
+          python3 - << 'EOF'
+          with open("meteostation.yaml", "r", encoding="utf-8") as f:
+              content = f.read()
+
+          # Remplacer la config Wi-Fi statique par un Wi-Fi ouvert + Improv Serial + Captive Portal
+          start = content.find("wifi:")
+          end = content.find("# --- GESTION DU DEEP SLEEP")
+          if start != -1 and end != -1:
+              generic_wifi = (
+                  "wifi:\n"
+                  "  power_save_mode: LIGHT\n"
+                  "  ap:\n"
+                  "    ssid: \"Station-Meteo-ePaper\"\n\n"
+                  "captive_portal:\n\n"
+                  "improv_serial:\n\n"
+              )
+              content = content[:start] + generic_wifi + content[end:]
+
+          with open("meteostation-web.yaml", "w", encoding="utf-8") as f:
+              f.write(content)
+          EOF
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,8 +61,8 @@ jobs:
       - name: Install ESPHome
         run: pip install esphome
 
-      - name: Compile ESPHome firmware
-        run: esphome compile meteostation.yaml
+      - name: Compile generic ESPHome firmware
+        run: esphome compile meteostation-web.yaml
 
       - name: Prepare GitHub Pages site
         run: |
@@ -102,7 +120,7 @@ jobs:
                   <li>Branchez la carte en USB-C à votre ordinateur.</li>
                   <li>Maintenez le bouton <strong>BOOT (GPIO0)</strong>, appuyez sur <strong>RESET</strong>, puis relâchez <strong>BOOT</strong>.</li>
                   <li>Cliquez sur <strong>Connect</strong> et sélectionnez le port <em>USB JTAG/serial debug unit</em>.</li>
-                  <li>Après l'installation, appuyez sur <strong>RESET</strong>.</li>
+                  <li>Après l'installation, appuyez sur <strong>RESET</strong> puis configurez votre réseau Wi-Fi directement dans la fenêtre.</li>
                 </ol>
               </div>
             </div>
