@@ -25,10 +25,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Material Design Icons font & ESP Web Tools
+      - name: Install Material Design Icons font
         run: |
           mkdir -p fonts
-          npm install @mdi/font esp-web-tools@10 --no-save
+          npm install @mdi/font --no-save
           cp node_modules/@mdi/font/fonts/materialdesignicons-webfont.ttf fonts/materialdesignicons-webfont.ttf
 
       - name: Set up Python
@@ -65,8 +65,7 @@ jobs:
 
       - name: Prepare GitHub Pages site & Release binary
         run: |
-          mkdir -p _site/esp-web-tools
-          cp -r node_modules/esp-web-tools/dist/web/* _site/esp-web-tools/
+          mkdir -p _site
 
           BIN_PATH=$(find .esphome/build -name "firmware.factory.bin" | head -n 1)
           if [ -z "$BIN_PATH" ]; then
@@ -111,12 +110,16 @@ jobs:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Station Météo e-Paper - Web Installer</title>
-            <script type="module" src="./esp-web-tools/install-button.js?module"></script>
+            <script type="module" src="https://esm.sh"></script>
             <style>
               body { font-family: system-ui, -apple-system, sans-serif; max-width: 650px; margin: 40px auto; padding: 0 20px; text-align: center; color: #1f2328; }
               img { max-width: 240px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin: 20px 0; }
               .card { border: 1px solid #d0d7de; border-radius: 12px; padding: 24px; background: #f6f8fa; }
               .steps { text-align: left; margin-top: 20px; line-height: 1.6; }
+              esp-web-install-button:not(:defined) > [slot="unsupported"],
+              esp-web-install-button:not(:defined) > [slot="not-allowed"] {
+                display: none;
+              }
               button[slot="activate"] {
                 background-color: #0969da; color: white; border: none; border-radius: 6px;
                 padding: 12px 24px; font-size: 16px; font-weight: 600; cursor: pointer;
