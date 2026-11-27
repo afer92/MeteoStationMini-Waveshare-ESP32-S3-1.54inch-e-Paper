@@ -1,5 +1,16 @@
 # 🌦️ Station Météo e-Paper (ESPHome & Home Assistant) / e-Paper Weather Station
 
+[![GitHub Release](https://img.shields.io/github/v/release/afer92/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper
+)](https://afer92.github.io/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper
+/)
+[![License](https://img.shields.io/badge/GPL%20v3-grey)](https://github.com/afer92/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper
+/blob/main/LICENSE)
+[![ESPHome](https://img.shields.io/badge/ESPHome-2026.11-grey)](https://esphome.io)
+[![Build Firmware](https://github.com/afer92/MuseRadio/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/afer92/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper
+/actions/workflows/deploy-pages.yml)
+[![Install via Browser](https://img.shields.io/badge/Install%20via%20browser--grey)](https://afer92.github.io/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper
+/)
+
 ![Aperçu de la Station Météo e-Paper / e-Paper Weather Station Preview](docs/screen.jpg)
 
 [🇫🇷 Français](#-français) | [🇬🇧 English](#-english)
