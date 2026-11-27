@@ -29,30 +29,6 @@ jobs:
           npm install @mdi/font --no-save
           cp node_modules/@mdi/font/fonts/materialdesignicons-webfont.ttf fonts/materialdesignicons-webfont.ttf
 
-      - name: Generate generic YAML for Web Installer (DHCP + Improv Serial)
-        run: |
-          python3 - << 'EOF'
-          with open("meteostation.yaml", "r", encoding="utf-8") as f:
-              content = f.read()
-
-          # Remplacer la config Wi-Fi statique par un Wi-Fi ouvert + Improv Serial + Captive Portal
-          start = content.find("wifi:")
-          end = content.find("# --- GESTION DU DEEP SLEEP")
-          if start != -1 and end != -1:
-              generic_wifi = (
-                  "wifi:\n"
-                  "  power_save_mode: LIGHT\n"
-                  "  ap:\n"
-                  "    ssid: \"Station-Meteo-ePaper\"\n\n"
-                  "captive_portal:\n\n"
-                  "improv_serial:\n\n"
-              )
-              content = content[:start] + generic_wifi + content[end:]
-
-          with open("meteostation-web.yaml", "w", encoding="utf-8") as f:
-              f.write(content)
-          EOF
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -60,6 +36,27 @@ jobs:
 
       - name: Install ESPHome
         run: pip install esphome
+
+      - name: Generate generic YAML for Web Installer (DHCP + Improv Serial)
+        run: |
+          printf 'wifi_ssid: "TestSSID"\nwifi_password: "TestPassword"\n' > secrets.yaml
+          python3 - << 'EOF'
+          import yaml
+
+          with open("meteostation.yaml", "r", encoding="utf-8") as f:
+              yaml.SafeLoader.add_constructor("!secret", lambda loader, node: "placeholder")
+              data = yaml.safe_load(f)
+
+          data["wifi"] = {
+              "power_save_mode": "LIGHT",
+              "ap": {"ssid": "Station-Meteo-ePaper"}
+          }
+          data["captive_portal"] = {}
+          data["improv_serial"] = {}
+
+          with open("meteostation-web.yaml", "w", encoding="utf-8") as f:
+              yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+          EOF
 
       - name: Compile generic ESPHome firmware
         run: esphome compile meteostation-web.yaml
@@ -100,12 +97,17 @@ jobs:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Station Météo e-Paper - Web Installer</title>
-            <script type="module" src="https://unpkg.com"></script>
+            <script type="module" src="https://jsdelivr.net"></script>
             <style>
               body { font-family: system-ui, -apple-system, sans-serif; max-width: 650px; margin: 40px auto; padding: 0 20px; text-align: center; color: #1f2328; }
               img { max-width: 240px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin: 20px 0; }
               .card { border: 1px solid #d0d7de; border-radius: 12px; padding: 24px; background: #f6f8fa; }
               .steps { text-align: left; margin-top: 20px; line-height: 1.6; }
+              button[slot="activate"] {
+                background-color: #0969da; color: white; border: none; border-radius: 6px;
+                padding: 12px 24px; font-size: 16px; font-weight: 600; cursor: pointer;
+              }
+              button[slot="activate"]:hover { background-color: #0550ae; }
             </style>
           </head>
           <body>
@@ -114,12 +116,16 @@ jobs:
             <img src="screen.jpg" alt="Aperçu écran" onerror="this.style.display='none'">
             <div class="card">
               <p><strong>Installation directe via USB-C (Chrome / Edge) :</strong></p>
-              <esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
+              <esp-web-install-button manifest="./manifest.json">
+                <button slot="activate">Connecter et Installer</button>
+                <span slot="unsupported">⚠️ Web Serial non détecté. Utilisez Google Chrome ou Microsoft Edge sur ordinateur (en HTTPS).</span>
+                <span slot="not-allowed">⚠️ Accès au port série bloqué par le navigateur.</span>
+              </esp-web-install-button>
               <div class="steps">
                 <ol>
                   <li>Branchez la carte en USB-C à votre ordinateur.</li>
                   <li>Maintenez le bouton <strong>BOOT (GPIO0)</strong>, appuyez sur <strong>RESET</strong>, puis relâchez <strong>BOOT</strong>.</li>
-                  <li>Cliquez sur <strong>Connect</strong> et sélectionnez le port <em>USB JTAG/serial debug unit</em>.</li>
+                  <li>Cliquez sur <strong>Connecter et Installer</strong> et sélectionnez le port <em>USB JTAG/serial debug unit</em>.</li>
                   <li>Après l'installation, appuyez sur <strong>RESET</strong> puis configurez votre réseau Wi-Fi directement dans la fenêtre.</li>
                 </ol>
               </div>
