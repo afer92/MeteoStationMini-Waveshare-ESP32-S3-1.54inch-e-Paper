@@ -1,0 +1,99 @@
+esphome:
+  name: epaper-minimal
+  friendly_name: "e-Paper Minimal"
+
+# --- ALIMENTATION MATÉRIELLE V2 ---
+power_supply:
+  - id: epd_power_enable
+    pin:
+      number: GPIO6
+      inverted: true
+    enable_on_boot: true
+
+  - id: v2_periph_power
+    pin:
+      number: GPIO42
+      inverted: true
+    enable_on_boot: true
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "ePaper-Minimal-Fallback"
+
+captive_portal:
+improv_serial:
+
+# --- BUS SPI (ÉCRAN) & I2C (CAPTEUR SHTC3) ---
+spi:
+  clk_pin: GPIO12
+  mosi_pin: GPIO13
+
+i2c:
+  sda: GPIO47
+  scl: GPIO48
+
+font:
+  - file: "gfonts://Roboto@700"
+    id: font_main
+    size: 22
+    glyphs: "0123456789.-°C%BatIn: "
+
+# --- CAPTEURS EMBARQUÉS ---
+sensor:
+  - platform: shtcx
+    address: 0x70
+    temperature:
+      name: "Température"
+      id: indoor_temp
+    humidity:
+      name: "Humidité"
+      id: indoor_hum
+    update_interval: 30s
+
+  - platform: adc
+    pin: GPIO4
+    name: "Batterie"
+    id: battery_pct
+    unit_of_measurement: "%"
+    device_class: battery
+    attenuation: 12db
+    update_interval: 30s
+    filters:
+      - multiply: 2.0
+      - calibrate_linear:
+          - 3.2 -> 0.0
+          - 4.2 -> 100.0
+      - clamp:
+          min_value: 0
+          max_value: 100
+
+# --- ÉCRAN WAVESHARE 1.54" V2 (200x200 px) ---
+display:
+  - platform: waveshare_epaper
+    cs_pin: GPIO11
+    dc_pin: GPIO10
+    busy_pin: GPIO8
+    reset_pin: GPIO9
+    model: 1.54inv2
+    update_interval: 60s
+    lambda: |-
+      it.fill(COLOR_OFF);
+      it.printf(10, 20, id(font_main), "In: %.1f°C", id(indoor_temp).state);
+      it.printf(10, 60, id(font_main), "Hum: %.0f%%", id(indoor_hum).state);
+      it.printf(10, 100, id(font_main), "Bat: %.0f%%", id(battery_pct).state);
