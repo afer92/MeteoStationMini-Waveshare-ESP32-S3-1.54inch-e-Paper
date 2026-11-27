@@ -91,7 +91,7 @@ jobs:
           with open("_site/manifest.json", "w", encoding="utf-8") as f:
               json.dump(manifest, f, indent=2)
 
-          cdn_script = "https://" + "esm.sh" + "/esp-web-tools@10"
+          cdn_script = "https://" + "unpkg.com" + "/esp-web-tools@10/dist/web/install-button.js?module"
           repo_link = "https://" + "github.com" + "/afer92/MeteoStationMini-Waveshare-ESP32-S3-1.54inch-e-Paper"
 
           html = f"""<!DOCTYPE html>
