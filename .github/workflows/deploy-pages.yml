@@ -29,6 +29,11 @@ jobs:
             printf 'wifi_ssid: "TestSSID"\nwifi_password: "TestPassword"\n' > secrets.yaml
           fi
 
+      - name: Download Material Design Icons font
+        run: |
+          mkdir -p fonts
+          curl -L -o fonts/materialdesignicons-webfont.ttf https://githubusercontent.com
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -43,19 +48,16 @@ jobs:
       - name: Prepare GitHub Pages site
         run: |
           mkdir -p _site
-          # Copier le binaire compilé (factory)
           BIN_PATH=$(find .esphome/build -name "firmware.factory.bin" | head -n 1)
           if [ -z "$BIN_PATH" ]; then
             BIN_PATH=$(find .esphome/build -name "firmware.bin" | head -n 1)
           fi
           cp "$BIN_PATH" _site/firmware.bin
 
-          # Copier l'image d'aperçu si présente
           if [ -f docs/screen.jpg ]; then
             cp docs/screen.jpg _site/screen.jpg
           fi
 
-          # Générer manifest.json pour ESP Web Tools
           cat << 'EOF' > _site/manifest.json
           {
             "name": "Station Météo e-Paper (Waveshare ESP32-S3 1.54 V2)",
@@ -72,7 +74,6 @@ jobs:
           }
           EOF
 
-          # Générer la page web d'installation directe (ESP Web Tools)
           cat << 'EOF' > _site/index.html
           <!DOCTYPE html>
           <html lang="fr">
@@ -100,7 +101,7 @@ jobs:
                   <li>Branchez la carte en USB-C à votre ordinateur.</li>
                   <li>Maintenez le bouton <strong>BOOT (GPIO0)</strong>, appuyez sur <strong>RESET</strong>, puis relâchez <strong>BOOT</strong>.</li>
                   <li>Cliquez sur <strong>Connect</strong> et sélectionnez le port <em>USB JTAG/serial debug unit</em>.</li>
-                  <li>Après l'installation, appuyez sur <strong>RESET</strong> et configurez le Wi-Fi (Improv).</li>
+                  <li>Après l'installation, appuyez sur <strong>RESET</strong>.</li>
                 </ol>
               </div>
             </div>
