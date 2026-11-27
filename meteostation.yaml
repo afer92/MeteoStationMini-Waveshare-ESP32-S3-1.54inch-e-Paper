@@ -1,6 +1,4 @@
 substitutions:
-  # Choisissez la langue : "FR", "EN", "ES", "DE", "IT"
-  lang: "FR"
   weather_entity: "weather.forecast_maison"
 
 esphome:
@@ -10,13 +8,11 @@ esphome:
     priority: 900
     then:
       - lambda: |-
-          // 1. Préparer le niveau HAUT sur GPIO17 AVANT de libérer le verrouillage
           gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
           gpio_set_level(GPIO_NUM_17, 1);
           gpio_hold_dis(GPIO_NUM_17);
           gpio_hold_dis(GPIO_NUM_6);
           gpio_deep_sleep_hold_dis();
-      # Sécurité : mise en veille après 20s si le Wi-Fi ou HA ne répond pas
       - delay: 20s
       - script.execute: aller_dormir
 
@@ -71,11 +67,11 @@ wifi:
     dns1: 8.8.8.8
     dns2: 8.8.4.4
 
+improv_serial:
+
 # --- GESTION DU DEEP SLEEP ---
-# Réglé sur 1min pour valider le réveil sans USB (repasser à 60min ensuite)
 deep_sleep:
   id: deep_sleep_control
-  # sleep_duration: 1min
   sleep_duration: 60min
   wakeup_pin:
     number: GPIO18
@@ -99,7 +95,6 @@ script:
             switch.is_off: prevent_deep_sleep
           then:
             - lambda: |-
-                // 2. Fixer les niveaux AVANT d'activer le verrouillage de veille
                 gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
                 gpio_set_level(GPIO_NUM_17, 1);
                 gpio_set_direction(GPIO_NUM_6, GPIO_MODE_OUTPUT);
@@ -127,34 +122,34 @@ i2c:
 
 # --- POLICES & ICÔNES ---
 font:
-  - file: "gfonts://Roboto@700"
-    id: font_heure
-    size: 30
-    glyphs: "0123456789:"
-
+  # Bandeau supérieur : Heure et % batterie
   - file: "gfonts://Roboto@500"
-    id: font_titre
-    size: 13
-    glyphs: "ADEGINORSTUWXÉ"
+    id: font_top
+    size: 16
+    glyphs: "0123456789:%"
 
+  # Température extérieure principale (21.5°C)
   - file: "gfonts://Roboto@700"
-    id: font_temp_big
-    size: 30
-    glyphs: "0123456789.-°%"
+    id: font_outdoor_big
+    size: 34
+    glyphs: "0123456789.-°C"
 
-  - file: "gfonts://Roboto@500"
+  # Prévisions Min / Max
+  - file: "gfonts://Roboto@400"
     id: font_minmax
-    size: 12
+    size: 14
     glyphs: "0123456789-°/Minax "
 
-  - file: "gfonts://Roboto@400"
-    id: font_small
-    size: 13
-    glyphs: "0123456789.%-°"
+  # Valeurs intérieures (20.8°C  48%)
+  - file: "gfonts://Roboto@500"
+    id: font_indoor
+    size: 18
+    glyphs: "0123456789.-°C% "
 
+  # Grande icône météo centrale
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: font_weather_icons
-    size: 48
+    size: 64
     glyphs:
       - "\U000F0599" # sunny
       - "\U000F0595" # partlycloudy
@@ -165,6 +160,15 @@ font:
       - "\U000F0598" # snowy
       - "\U000F0591" # fog
       - "\U000F0594" # clear-night
+
+  # Petites icônes intérieures (maison + thermomètre + goutte)
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: font_small_icons
+    size: 24
+    glyphs:
+      - "\U000F02DC" # home (maison)
+      - "\U000F050F" # thermometer (thermomètre)
+      - "\U000F058C" # water (goutte)
 
 # --- DONNÉES DE HOME ASSISTANT ---
 text_sensor:
@@ -232,42 +236,24 @@ display:
     lambda: |-
       it.fill(COLOR_OFF);
 
-      const std::string lang = "${lang}";
-      const char* lbl_ext = "EXTÉRIEUR";
-      const char* lbl_int = "INTÉRIEUR";
-      const char* lbl_min = "Min";
-      const char* lbl_max = "Max";
-
-      if (lang == "EN") {
-        lbl_ext = "OUTDOOR";
-        lbl_int = "INDOOR";
-      } else if (lang == "ES") {
-        lbl_ext = "EXTERIOR";
-        lbl_int = "INTERIOR";
-      } else if (lang == "DE") {
-        lbl_ext = "AUSSEN";
-        lbl_int = "INNEN";
-      } else if (lang == "IT") {
-        lbl_ext = "ESTERNO";
-        lbl_int = "INTERNO";
-      }
-
-      // 1. BANDEAU SUPÉRIEUR : HEURE, BATTERIE & PRÉVISIONS
+      // 1. BANDEAU SUPÉRIEUR : HEURE & BATTERIE AVEC ICÔNE
       if (id(ha_time).now().is_valid()) {
-        it.strftime(6, 6, id(font_heure), "%H:%M", id(ha_time).now());
+        it.strftime(6, 6, id(font_top), "%H:%M", id(ha_time).now());
       }
       if (id(battery_voltage).has_state()) {
-        it.printf(194, 6, id(font_small), TextAlign::TOP_RIGHT, "%.0f%%", id(battery_voltage).state);
+        float bat = id(battery_voltage).state;
+        it.printf(166, 6, id(font_top), TextAlign::TOP_RIGHT, "%.0f%%", bat);
+        // Dessin de l'icône batterie (x=171..191, y=8..19)
+        it.rectangle(171, 8, 20, 12);
+        it.filled_rectangle(191, 11, 2, 6);
+        int fill_w = (int)((bat / 100.0f) * 16.0f);
+        if (fill_w > 0) {
+          it.filled_rectangle(173, 10, fill_w, 8);
+        }
       }
-      if (id(outdoor_temp_min).has_state() && id(outdoor_temp_max).has_state()) {
-        it.printf(194, 28, id(font_minmax), TextAlign::TOP_RIGHT, "%s %.0f° / %s %.0f°",
-                  lbl_min, id(outdoor_temp_min).state, lbl_max, id(outdoor_temp_max).state);
-      }
-      it.line(6, 54, 194, 54);
+      it.line(6, 28, 194, 28);
 
-      // 2. ZONE CENTRALE : MÉTÉO EXTÉRIEURE
-      it.printf(6, 60, id(font_titre), "%s", lbl_ext);
-
+      // 2. ZONE CENTRALE : ICÔNE MÉTÉO, TEMPÉRATURE & MIN/MAX
       std::string cond = id(weather_condition).state;
       const char* icon = "\U000F0590";
       if (cond == "sunny") icon = "\U000F0599";
@@ -279,18 +265,26 @@ display:
       else if (cond == "snowy" || cond == "snowy-rainy") icon = "\U000F0598";
       else if (cond == "fog") icon = "\U000F0591";
 
-      it.printf(12, 76, id(font_weather_icons), "%s", icon);
+      it.printf(8, 46, id(font_weather_icons), "%s", icon);
 
       if (id(outdoor_temp).has_state()) {
-        it.printf(194, 78, id(font_temp_big), TextAlign::TOP_RIGHT, "%.1f°", id(outdoor_temp).state);
+        it.printf(194, 52, id(font_outdoor_big), TextAlign::TOP_RIGHT, "%.1f°C", id(outdoor_temp).state);
       }
-      it.line(6, 130, 194, 130);
+      if (id(outdoor_temp_min).has_state() && id(outdoor_temp_max).has_state()) {
+        it.printf(190, 98, id(font_minmax), TextAlign::TOP_RIGHT, "Min %.0f° / Max %.0f°",
+                  id(outdoor_temp_min).state, id(outdoor_temp_max).state);
+      }
+      it.line(6, 134, 194, 134);
 
-      // 3. ZONE INFÉRIEURE : CAPTEUR INTÉRIEUR
-      it.printf(6, 136, id(font_titre), "%s", lbl_int);
+      // 3. ZONE INFÉRIEURE : ICÔNE MAISON + THERMOMÈTRE TEMP + GOUTTE HUMIDITÉ
+      it.printf(4, 152, id(font_small_icons), "\U000F02DC");
+
       if (id(indoor_temp).has_state()) {
-        it.printf(6, 154, id(font_temp_big), "%.1f°", id(indoor_temp).state);
+        it.printf(36, 152, id(font_small_icons), "\U000F050F");
+        it.printf(58, 155, id(font_indoor), "%.1f°C", id(indoor_temp).state);
       }
+
       if (id(indoor_hum).has_state()) {
-        it.printf(194, 154, id(font_temp_big), TextAlign::TOP_RIGHT, "%.0f%%", id(indoor_hum).state);
+        it.printf(136, 152, id(font_small_icons), "\U000F058C");
+        it.printf(196, 155, id(font_indoor), TextAlign::TOP_RIGHT, "%.0f%%", id(indoor_hum).state);
       }
