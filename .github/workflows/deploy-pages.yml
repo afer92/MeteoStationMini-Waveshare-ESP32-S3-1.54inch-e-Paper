@@ -83,11 +83,16 @@ jobs:
           python3 - << 'EOF'
           import os, json, glob, shutil, subprocess
 
-          # Trouver le dossier de build PlatformIO / ESP-IDF
-          fw_files = glob.glob(".esphome/build/**/firmware.bin", recursive=True)
-          if not fw_files:
-              raise FileNotFoundError("firmware.bin introuvable dans .esphome/build")
-          build_dir = os.path.dirname(fw_files[0])
+          # Trouver le dossier de build via bootloader.bin (toujours présent sur ESP32-S3)
+          boot_files = glob.glob(".esphome/build/**/bootloader.bin", recursive=True)
+          if not boot_files:
+              raise FileNotFoundError("bootloader.bin introuvable dans .esphome/build")
+          build_dir = os.path.dirname(boot_files[0])
+
+          # Repérer le binaire applicatif (firmware.bin ou station-meteo-epaper.bin)
+          app_bin = "firmware.bin"
+          if not os.path.exists(os.path.join(build_dir, app_bin)):
+              app_bin = "station-meteo-epaper.bin"
 
           parts = []
           # ESP32-S3 : bootloader à 0x0 (0), partitions à 0x8000 (32768), ota_data à 0xe000 (57344), app à 0x10000 (65536)
@@ -95,15 +100,16 @@ jobs:
               ("bootloader.bin", 0),
               ("partitions.bin", 32768),
               ("ota_data_initial.bin", 57344),
-              ("firmware.bin", 65536),
+              (app_bin, 65536),
           ]
 
           merge_args = []
           for fname, offset in candidates:
               src = os.path.join(build_dir, fname)
               if os.path.exists(src):
-                  shutil.copy(src, f"_site/{fname}")
-                  parts.append({"path": fname, "offset": offset})
+                  dest_name = "firmware.bin" if fname == app_bin else fname
+                  shutil.copy(src, f"_site/{dest_name}")
+                  parts.append({"path": dest_name, "offset": offset})
                   merge_args.extend([hex(offset), src])
 
           # Générer un fichier factory unique complet pour la GitHub Release
