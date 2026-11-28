@@ -46,6 +46,348 @@ api:
   on_client_connected:
     - delay: 4s
     - component.update: epaper_display
+    - wait_until:
+        condition:
+          not:
+            epaper_spi.is_updating: epaper_display
+        timeout: 10s
+    - delay: 500ms
+    - script.execute: aller_dormir
+
+ota:
+  - platform: esphome
+
+safe_mode:
+  boot_is_good_after: 5s
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  power_save_mode: LIGHT
+  manual_ip:
+    static_ip: 192.168.0.56
+    gateway: 192.168.0.254
+    subnet: 255.255.255.0
+    dns1: 8.8.8.8
+    dns2: 8.8.4.4
+
+improv_serial:
+
+# --- GESTION DU DEEP SLEEP ---
+deep_sleep:
+  id: deep_sleep_control
+  sleep_duration: 60min
+  wakeup_pin:
+    number: GPIO18
+    inverted: true
+    mode:
+      input: true
+      pullup: true
+
+switch:
+  - platform: template
+    name: "Bloquer Deep Sleep (Mode OTA)"
+    id: prevent_deep_sleep
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    # restore_mode: RESTORE_DEFAULT_ON
+
+number:
+  - platform: template
+    name: "Durée Deep Sleep"
+    id: sleep_duration_min
+    unit_of_measurement: "min"
+    icon: "mdi:sleep"
+    min_value: 1
+    max_value: 1440
+    step: 5
+    initial_value: 60
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  - platform: template
+    name: "Offset Température Intérieure"
+    id: indoor_temp_offset
+    unit_of_measurement: "°C"
+    icon: "mdi:thermometer-plus"
+    min_value: -10.0
+    max_value: 10.0
+    step: 0.1
+    initial_value: 0.0
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  - platform: template
+    name: "Offset Humidité Intérieure"
+    id: indoor_hum_offset
+    unit_of_measurement: "%"
+    icon: "mdi:water-percent"
+    min_value: -20.0
+    max_value: 20.0
+    step: 1.0
+    initial_value: 0.0
+    optimistic: true
+    restore_value: true
+    mode: box
+    
+script:
+  - id: aller_dormir
+    then:
+      - if:
+          condition:
+            switch.is_off: prevent_deep_sleep
+          then:
+            - lambda: |-
+                gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+                gpio_set_level(GPIO_NUM_17, 1);
+                gpio_set_direction(GPIO_NUM_6, GPIO_MODE_OUTPUT);
+                gpio_set_level(GPIO_NUM_6, 1);
+                gpio_hold_en(GPIO_NUM_17);
+                gpio_hold_en(GPIO_NUM_6);
+                gpio_deep_sleep_hold_en();
+                id(deep_sleep_control).set_sleep_duration(
+                  (uint64_t)(id(sleep_duration_min).state * 60000ULL)
+                );
+            - deep_sleep.enter: deep_sleep_control
+
+# --- HEURE VIA HOME ASSISTANT ---
+time:
+  - platform: homeassistant
+    id: ha_time
+
+# --- BUS SPI & I2C ---
+spi:
+  clk_pin: GPIO12
+  mosi_pin: GPIO13
+  id: spi_epaper
+
+i2c:
+  sda: GPIO47
+  scl: GPIO48
+  id: bus_a
+
+# --- POLICES & ICÔNES ---
+font:
+  # Bandeau supérieur : Heure et % batterie
+  - file: "gfonts://Roboto@500"
+    id: font_top
+    size: 16
+    glyphs: "0123456789:%"
+
+  # Température extérieure principale (21.5°C)
+  - file: "gfonts://Roboto@700"
+    id: font_outdoor_big
+    size: 34
+    glyphs: "0123456789.-°C"
+
+  # Prévisions Min / Max
+  - file: "gfonts://Roboto@400"
+    id: font_minmax
+    size: 14
+    glyphs: "0123456789-°/Minax "
+
+  # Valeurs intérieures (20.8°C  48%)
+  - file: "gfonts://Roboto@500"
+    id: font_indoor
+    size: 22
+    glyphs: "0123456789.-°C% "
+
+  # Grande icône météo centrale
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: font_weather_icons
+    size: 64
+    glyphs:
+      - "\U000F0599" # sunny
+      - "\U000F0595" # partlycloudy
+      - "\U000F0590" # cloudy
+      - "\U000F0597" # rainy
+      - "\U000F0596" # pouring
+      - "\U000F0593" # lightning-rainy
+      - "\U000F0598" # snowy
+      - "\U000F0591" # fog
+      - "\U000F0594" # clear-night
+
+  # Petites icônes intérieures (maison + thermomètre + goutte)
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: font_small_icons
+    size: 24
+    glyphs:
+      - "\U000F02DC" # home (maison)
+      - "\U000F050F" # thermometer (thermomètre)
+      - "\U000F058C" # water (goutte)
+
+# --- DONNÉES DE HOME ASSISTANT ---
+text_sensor:
+  - platform: homeassistant
+    id: weather_condition
+    entity_id: ${weather_entity}
+
+sensor:
+  - platform: homeassistant
+    id: outdoor_temp
+    entity_id: ${weather_entity}
+    attribute: temperature
+
+  - platform: homeassistant
+    id: outdoor_temp_max
+    entity_id: sensor.meteo_max_aujourd_hui
+
+  - platform: homeassistant
+    id: outdoor_temp_min
+    entity_id: sensor.meteo_min_aujourd_hui
+
+  - platform: shtcx
+    i2c_id: bus_a
+    address: 0x70
+    temperature:
+      name: "Température Intérieure"
+      id: indoor_temp
+      filters:
+        - lambda: return x + id(indoor_temp_offset).state;
+    humidity:
+      name: "Humidité Intérieure"
+      id: indoor_hum
+      filters:
+        - lambda: return x + id(indoor_hum_offset).state;
+    update_interval: 5s
+
+  - platform: adc
+    pin: GPIO4
+    name: "Batterie"
+    id: battery_voltage
+    unit_of_measurement: "%"
+    device_class: battery
+    attenuation: 12db
+    update_interval: 5s
+    filters:
+      - multiply: 2.0
+      - calibrate_linear:
+          - 3.2 -> 0.0
+          - 4.2 -> 100.0
+      - clamp:
+          min_value: 0
+          max_value: 100
+
+# --- MISE EN PAGE GRAPHIQUE (200x200 px) ---
+display:
+  - platform: epaper_spi
+    id: epaper_display
+    spi_id: spi_epaper
+    model: Waveshare-1.54in-v2
+    cs_pin: GPIO11
+    dc_pin: GPIO10
+    busy_pin:
+      number: GPIO8
+      inverted: false
+    reset_pin: GPIO9
+    full_update_every: 1
+    reset_duration: 2ms
+    update_interval: never
+    lambda: |-
+      // 1. BANDEAU SUPÉRIEUR : HEURE & BATTERIE AVEC ICÔNE
+      if (id(ha_time).now().is_valid()) {
+        it.strftime(6, 6, id(font_top), Color::BLACK, "%H:%M", id(ha_time).now());
+      }
+      if (id(battery_voltage).has_state()) {
+        float bat = id(battery_voltage).state;
+        it.printf(166, 6, id(font_top), Color::BLACK, TextAlign::TOP_RIGHT, "%.0f%%", bat);
+        // Dessin de l'icône batterie (x=171..191, y=8..19)
+        it.rectangle(171, 8, 20, 12, Color::BLACK);
+        it.filled_rectangle(191, 11, 2, 6, Color::BLACK);
+        int fill_w = (int)((bat / 100.0f) * 16.0f);
+        if (fill_w > 0) {
+          it.filled_rectangle(173, 10, fill_w, 8, Color::BLACK);
+        }
+      }
+      it.line(6, 28, 194, 28, Color::BLACK);
+
+      // 2. ZONE CENTRALE : ICÔNE MÉTÉO, TEMPÉRATURE & MIN/MAX
+      std::string cond = id(weather_condition).state;
+      const char* icon = "\U000F0590";
+      if (cond == "sunny") icon = "\U000F0599";
+      else if (cond == "clear-night") icon = "\U000F0594";
+      else if (cond == "partlycloudy") icon = "\U000F0595";
+      else if (cond == "rainy") icon = "\U000F0597";
+      else if (cond == "pouring") icon = "\U000F0596";
+      else if (cond == "lightning" || cond == "lightning-rainy") icon = "\U000F0593";
+      else if (cond == "snowy" || cond == "snowy-rainy") icon = "\U000F0598";
+      else if (cond == "fog") icon = "\U000F0591";
+
+      it.printf(8, 46, id(font_weather_icons), Color::BLACK, "%s", icon);
+
+      if (id(outdoor_temp).has_state()) {
+        it.printf(194, 52, id(font_outdoor_big), Color::BLACK, TextAlign::TOP_RIGHT, "%.1f°C", id(outdoor_temp).state);
+      }
+      if (id(outdoor_temp_min).has_state() && id(outdoor_temp_max).has_state()) {
+        it.printf(190, 98, id(font_minmax), Color::BLACK, TextAlign::TOP_RIGHT, "Min %.0f° / Max %.0f°",
+                  id(outdoor_temp_min).state, id(outdoor_temp_max).state);
+      }
+      it.line(6, 134, 194, 134, Color::BLACK);
+
+      // 3. ZONE INFÉRIEURE : ICÔNE MAISON + THERMOMÈTRE TEMP + GOUTTE HUMIDITÉ
+      it.printf(2, 152, id(font_small_icons), Color::BLACK, "\U000F02DC");
+
+      if (id(indoor_temp).has_state()) {
+        it.printf(30, 152, id(font_small_icons), Color::BLACK, "\U000F050F");
+        it.printf(52, 153, id(font_indoor), Color::BLACK, "%.1f°", id(indoor_temp).state);
+      }
+
+      if (id(indoor_hum).has_state()) {
+        it.printf(126, 152, id(font_small_icons), Color::BLACK, "\U000F058C");
+        it.printf(198, 153, id(font_indoor), Color::BLACK, TextAlign::TOP_RIGHT, "%.0f%%", id(indoor_hum).state);
+      }
+
+substitutions:
+  weather_entity: "weather.forecast_maison"
+
+esphome:
+  name: station-meteo-epaper
+  friendly_name: "Station Météo e-Paper"
+  on_boot:
+    priority: 900
+    then:
+      - lambda: |-
+          gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+          gpio_set_level(GPIO_NUM_17, 1);
+          gpio_hold_dis(GPIO_NUM_17);
+          gpio_hold_dis(GPIO_NUM_6);
+          gpio_deep_sleep_hold_dis();
+      - delay: 20s
+      - script.execute: aller_dormir
+
+# --- ALIMENTATION PRIORITAIRE V2 (AVANT SETUP) ---
+power_supply:
+  - id: epd_power_enable
+    pin:
+      number: GPIO6
+      inverted: true
+    enable_on_boot: true
+    keep_on_time: 0s
+
+  - id: v2_periph_power
+    pin:
+      number: GPIO42
+      inverted: true
+    enable_on_boot: true
+    keep_on_time: 0s
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+  hardware_uart: USB_SERIAL_JTAG
+
+api:
+  on_client_connected:
+    - delay: 4s
+    - component.update: epaper_display
     - delay: 3s
     - script.execute: aller_dormir
 
